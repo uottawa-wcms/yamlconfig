@@ -1,0 +1,252 @@
+<?php
+
+define('YAMLCONFIG_CREATE', 'create');
+define('YAMLCONFIG_REFRESH', 'refresh');
+define('YAMLCONFIG_DISABLE', 'disable');
+define('YAMLCONFIG_UNINSTALL', 'uninstall');
+
+function yamlconfig_yamlconfig_handlers() {
+  return array(
+    'role' => array(
+      'weight' => 0,  
+    ),
+    'vocabulary' => array(
+      'weight' => 50,  
+    ),
+    'field' => array(
+      'weight' => 100,
+    ),
+    'node_type' => array(
+      'weight' => 500,
+    ),
+    'text_format' => array(
+      'weight' => 4000,  
+    ),
+    'wysiwyg_profile' => array(
+      'weight' => 4500,  
+    ),
+    'field_instance' => array(
+      'weight' => 5000,
+    ),
+    'field_replace' => array(
+      'weight' => 9500,  
+    ),
+    'term' => array(
+      'weight' => 10000,
+    ),
+    'permission' => array(
+      'weight' => 20000,  
+    ),
+  );
+}
+
+function yamlconfig_get_handler_info($type = NULL) {
+  $handlers = drupal_static(__FUNCTION__, NULL);
+  if (empty($handlers)) {
+    $handlers = array();
+    foreach (module_implements('yamlconfig_handlers') as $module) {
+      $function = $module . '_yamlconfig_handlers';
+      if (function_exists($function)) {
+        $temp_handlers = $function();
+        foreach ($temp_handlers as $key => $handler) {
+          $temp_handlers[$key] += array(
+            'module' => $module,
+            'type' => 'inc',
+            'file' => 'yamlconfig_handlers/' . $key,
+            'preprocess' => $module . '_' . $key . '_handler_preprocess',
+            'validate' => $module . '_' . $key . '_handler_validate',
+            'create' => $module . '_' . $key . '_handler_create',
+            'refresh' => $module . '_' . $key . '_handler_refresh',
+            'disable' => $module . '_' . $key . '_handler_disable',
+            'uninstall' => $module . '_' . $key . '_handler_uninstall',
+            'weight' => 0,
+          );
+        }
+        $handlers += $temp_handlers;
+      }
+    }
+  }
+  if (!empty($type)) {
+    if (isset($handlers[$type])) {
+      return $handlers[$type];
+    }
+    return FALSE;
+  }
+  return $handlers;
+}
+
+function _yamlconfig_sort_parser_weight($a, $b) {
+  $a_type = yamlconfig_get_handler_info($a);
+  $b_type = yamlconfig_get_handler_info($b);
+  return $a_type['weight'] - $b_type['weight'];
+}
+
+function yamlconfig_process_config($files, $mode = YAMLCONFIG_CREATE) {
+  drupal_alter(array('yamlconfig_files'), $mode);
+  $objects = _yamlconfig_load_yaml_objects($files);
+  uksort($objects, '_yamlconfig_sort_parser_weight');
+  foreach ($objects as $type => $obj_list) {
+    $parser_info = yamlconfig_get_handler_info($type);
+    if (!empty($parser_info['file'])) {
+      module_load_include($parser_info['type'], $parser_info['module'], $parser_info['file']);
+    }
+    $validate_function = $parser_info['validate'];
+    if (!is_callable($validate_function)) {
+      $validate_function = TRUE;
+    }
+    $function = $parser_info[$mode];
+    $preprocess_function = $parser_info['preprocess'];
+    $preprocess = is_callable($preprocess_function);
+    if (is_callable($function)) {
+      foreach ($obj_list as $obj) {
+        $passed = TRUE;
+        if (!is_bool($validate_function)) {
+          $passed = $validate_function($obj);
+        }
+        if ($passed) {
+          if ($preprocess) {
+            $preprocess_function($obj);
+          }
+          $function($obj);
+        } else {
+          // exception handling error
+        }
+      }
+    }
+  }
+}
+
+function yamlconfig_refresh_config() {
+  $yamlconfig_files = array();
+  $modules = module_implements('yamlconfig_directories');
+  foreach ($modules as $module) {
+    $dir_hook = $module . '_yamlconfig_directories';
+    if (function_exists($dir_hook)) {
+      $directories = $dir_hook();
+      foreach ($directories as $dir) {
+        _yamlconfig_find_yaml_files($module, _yamlconfig_build_config_directory($module, $dir), $yamlconfig_files);
+      }
+    }
+  }
+  yamlconfig_process_config($yamlconfig_files, YAMLCONFIG_REFRESH);
+}
+
+function yamlconfig_modules_uninstalled($modules) {
+  $yamlconfig_files = array();
+  foreach ($modules as $module) {
+    $dir_hook = $module . '_yamlconfig_directories';
+    // module has been disabled, need to look for the hook here
+    // this only gives a directory path so.
+    drupal_load('module', $module);
+    if (function_exists($dir_hook)) {
+      $directories = $dir_hook();
+      foreach ($directories as $dir) {
+        _yamlconfig_find_yaml_files($module, _yamlconfig_build_config_directory($module, $dir), $yamlconfig_files);
+      }
+    }
+  }
+  yamlconfig_process_config($yamlconfig_files, YAMLCONFIG_DISABLE);
+}
+
+function yamlconfig_modules_disabled($modules) {
+  $yamlconfig_files = array();
+  foreach ($modules as $module) {
+    $dir_hook = $module . '_yamlconfig_directories';
+    if (function_exists($dir_hook)) {
+      $directories = $dir_hook();
+      foreach ($directories as $dir) {
+        _yamlconfig_find_yaml_files($module, _yamlconfig_build_config_directory($module, $dir), $yamlconfig_files);
+      }
+    }
+  }
+  yamlconfig_process_config($yamlconfig_files, YAMLCONFIG_DISABLE);
+}
+
+function yamlconfig_modules_enabled($modules) {
+  $yamlconfig_files = array();
+  foreach ($modules as $module) {
+    $dir_hook = $module . '_yamlconfig_directories';
+    if (function_exists($dir_hook)) {
+      $directories = $dir_hook();
+      foreach ($directories as $dir) {
+        _yamlconfig_find_yaml_files($module, _yamlconfig_build_config_directory($module, $dir), $yamlconfig_files);
+      }
+    }
+  }
+  yamlconfig_process_config($yamlconfig_files, YAMLCONFIG_CREATE);
+}
+
+function _yamlconfig_parse_yaml_objects($file) {
+  // this is really bad. don't do it. use libraries later.
+  if (!function_exists('spyc_load_file')) {
+    include DRUPAL_ROOT . '/sites/all/libraries/spyc/Spyc.php';
+  }
+  $pieces = explode('.', $file);
+  // assumption - each file has only one document. we need to 
+  // figure out how to use multiple documents in one file here
+  $data = spyc_load_file($file);
+  echo "\r\nSYPC:\r\n";
+  var_dump($data);
+  echo "\r\n";
+  return array(
+    $pieces[1] => array(
+      $pieces[2] => $data,
+    ),
+  );
+}
+
+function _yamlconfig_load_yaml_objects($files) {
+  $objects = array();
+  foreach ($files as $file) {
+    $conf = _yamlconfig_parse_yaml_objects($file);
+    foreach ($conf as $type => $obj_list) {
+      if (!isset($objects[$type])) {
+        $objects[$type] = array();
+      }
+      $objects[$type] += $obj_list;
+    }
+  }
+  var_dump($objects);
+  print "\r\n" . '------------' . "\r\n";
+  return $objects;
+}
+
+function _yamlconfig_build_config_directory($module, $directory) {
+  $path = drupal_get_path('module', $module);
+  $endchar = substr($path, -1);
+  if ($endchar != '/' || $endchar != '\\') {
+    $path .= '/';
+  }
+  return DRUPAL_ROOT . '/' . $path . $directory;
+}
+
+function _yamlconfig_find_yaml_files($module, $directory, &$files) {
+  $last = substr($directory, -1);
+  if ($last != '/' && $last != '\\') {
+    $directory .= '/';
+  }
+  $handle = opendir($directory);
+  while (($file = readdir($handle)) !== FALSE) {
+    if (substr($file, -1) != '.') {
+      if (_yamlconfig_is_yaml_file($module, $file)) {
+        $files[] = $directory . $file;
+      } elseif (is_dir($directory . $file)) {
+        _yamlconfig_find_yaml_files($module, $directory . $file, $files);
+      }
+    }  
+  }
+}
+
+function _yamlconfig_is_yaml_file($module, $file) {
+  $pieces = explode('.', $file);
+  if (count($pieces) < 3) {
+    return FALSE;
+  }
+  if ($pieces[0] != $module) {
+    return FALSE;
+  }
+  if ($pieces[count($pieces) - 1] != 'yml') {
+    return FALSE;
+  }
+  return TRUE;
+}

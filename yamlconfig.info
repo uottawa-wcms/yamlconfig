@@ -1,0 +1,3 @@
+name = YAML Config
+description = "Allows for configuration to be imported via YAML"
+core = 7.x
