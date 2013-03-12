@@ -20,6 +20,15 @@ function yamlconfig_field_instance_handler_validate($def) {
   return TRUE;
 }
 
+function yamlconfig_field_instance_handler_preprocess(&$def) {
+  if (!empty($def['widget'])) {
+    yamlconfig_stored_value_replacement('widget_instance', $def['widget']);
+  }
+  if (!empty($def['settings']['better_formats'])) {
+    yamlconfig_stored_value_replacement('wysiwyg_instance', $def['settings']['better_formats']);
+  }
+}
+
 function yamlconfig_field_instance_handler_create($def) {
   if (!field_info_instance($def['entity_type'], $def['field_name'], $def['bundle'])) {
     field_create_instance($def);

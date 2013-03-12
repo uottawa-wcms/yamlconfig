@@ -1,7 +1,7 @@
 <?php
 
 function yamlconfig_permission_handler_validate($def) {
-  if (empty($def['role'])) {
+  if (empty($def['roles'])) {
     return FALSE;
   }
   if (empty($def['permissions'])) {
@@ -21,16 +21,24 @@ function yamlconfig_permission_handler_validate($def) {
   }
 }
 
-function yamlconfig_permission_handler_preprocess(&$def) {  
-  $role = user_role_load_by_name($def['role']);
-  $def['rid'] = $role->rid;
+function yamlconfig_permission_handler_preprocess(&$def) {
+  if (!is_array($def['roles'])) {
+    $def['roles'] = array($def['roles']);
+  }
+  $def['rids']= array();
+  foreach ($def['roles'] as $role) {
+    $obj = user_role_load_by_name($role);
+    $def['rids'][] = $obj->rid;
+  }
   if (!is_array($def['permissions'])) {
     $def['permissions'] = array($def['permissions']);
   }
 }
 
 function yamlconfig_permission_handler_create($def) {
-  user_role_grant_permissions($def['rid'], $def['permissions']);
+  foreach ($def['rids'] as $rid) {
+    user_role_grant_permissions($rid, $def['permissions']);
+  }
 }
 
 function yamlconfig_permission_handler_refresh($def) {
@@ -38,5 +46,7 @@ function yamlconfig_permission_handler_refresh($def) {
 }
 
 function yamlconfig_permission_handler_disable($def) {
-  user_role_revoke_permissions($def['rid'], $def['permissions']);
+  foreach ($def['rids'] as $rid) {
+    user_role_revoke_permissions($rid, $def['permissions']);
+  }
 }

@@ -1,0 +1,50 @@
+<?php
+
+function yamlconfig_schema() {
+  return array(
+    'yamlconfig_storage' => _yamlconfig_schema_storage(),
+  );
+}
+
+/**
+ * Table definition for yamlconfig_storage
+ */
+function _yamlconfig_schema_storage() {
+  return array(
+    'fields' => array(
+      'id' => array(
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'size' => 'normal',
+      ),
+      'type' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'key' => array(
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'serialize' => FALSE,
+        'binary' => FALSE,
+      ),
+      'data' => array(
+        'type' => 'blob',
+        'size' => 'normal',
+        'not null' => TRUE,
+        'serialize' => TRUE,
+      ),
+    ),
+    'primary key' => array(
+      'id',
+    ),
+    'unique keys' => array(
+      'type_key' => array('type', 'key'),
+    ),
+    'indexes' => array(),
+  );
+}

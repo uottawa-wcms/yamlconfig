@@ -21,6 +21,8 @@ function yamlconfig_node_type_handler_validate($def) {
 
 function yamlconfig_node_type_handler_create($def) {
   node_type_save((object) $def);
+  // do something with this
+  //variable_set('language_content_type_uottawa_index_page',TRANSLATION_ENABLED);
 }
 
 function yamlconfig_node_type_handler_refresh($def) {

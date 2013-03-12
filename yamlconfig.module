@@ -5,13 +5,25 @@ define('YAMLCONFIG_REFRESH', 'refresh');
 define('YAMLCONFIG_DISABLE', 'disable');
 define('YAMLCONFIG_UNINSTALL', 'uninstall');
 
+
+function yamlconfig_stored_value_replacement($type, &$location) {
+  if (isset($location['ref'])) {
+    $reference = yamlconfig_retrieve_value($type, $location['ref']);
+    unset($location['ref']);
+    $location += $reference;
+  }
+}
+
 function yamlconfig_yamlconfig_handlers() {
   return array(
+    'language' => array(
+      'weight' => -20,
+    ),
     'role' => array(
-      'weight' => 0,  
+      'weight' => 0,
     ),
     'vocabulary' => array(
-      'weight' => 50,  
+      'weight' => 50,
     ),
     'field' => array(
       'weight' => 100,
@@ -20,24 +32,69 @@ function yamlconfig_yamlconfig_handlers() {
       'weight' => 500,
     ),
     'text_format' => array(
-      'weight' => 4000,  
+      'weight' => 4000,
     ),
     'wysiwyg_profile' => array(
-      'weight' => 4500,  
+      'weight' => 4500,
+    ),
+    'widget_instance' => array(
+      'weight' => 4600,
+    ),
+    'wysiwyg_instance' => array(
+      'weight' => 4700,
     ),
     'field_instance' => array(
       'weight' => 5000,
     ),
     'field_replace' => array(
-      'weight' => 9500,  
+      'weight' => 9500,
     ),
     'term' => array(
       'weight' => 10000,
     ),
     'permission' => array(
-      'weight' => 20000,  
+      'weight' => 20000,
     ),
   );
+}
+
+function yamlconfig_store_value($type, $key, $data) {
+  $q = db_merge('yamlconfig_storage');
+  $q->fields(array(
+    'type' => $type,
+    'key' => $key,
+    'data' => serialize($data),
+  ));
+  $q->key(array(
+    'type' => $type,
+    'key' => $key,
+  ));
+  $res = $q->execute();
+  // clear static cache also
+  $results = drupal_static('yamlconfig_retrieve_value');
+  $results[$type][$key] = $data;
+  return $res;
+}
+
+function yamlconfig_retrieve_value($type, $key) {
+  $results = drupal_static(__FUNCTION__, array());
+  if (empty($results)) {
+    $rs = db_query('SELECT * FROM {yamlconfig_storage}');
+    foreach ($rs as $row) {
+      $results[$row->type][$row->key] = unserialize($row->data);
+    }
+  }
+  if (!empty($results[$row->type][$row->key])) {
+    return $results[$row->type][$row->key];
+  }
+  return NULL;
+}
+
+function yamlconfig_remove_value($type, $key) {
+  db_delete('yamlconfig_storage')
+      ->condition('type', $type)
+      ->condition('key', $key)
+      ->execute();
 }
 
 function yamlconfig_get_handler_info($type = NULL) {
@@ -109,7 +166,10 @@ function yamlconfig_process_config($files, $mode = YAMLCONFIG_CREATE) {
           }
           $function($obj);
         } else {
-          // exception handling error
+          drupal_set_message(t('Invalid YAML object of type @type {@obj}', array(
+            '@type' => $type,
+            '@obj' => var_export($obj, TRUE),
+          )), 'error');
         }
       }
     }
@@ -182,11 +242,9 @@ function _yamlconfig_parse_yaml_objects($file) {
     include DRUPAL_ROOT . '/sites/all/libraries/spyc/Spyc.php';
   }
   $pieces = explode('.', $file);
-  // assumption - each file has only one document. we need to 
+  // assumption - each file has only one document. we need to
   // figure out how to use multiple documents in one file here
   $data = spyc_load_file($file);
-  echo "\r\nSYPC:\r\n";
-  var_dump($data);
   echo "\r\n";
   return array(
     $pieces[1] => array(
@@ -206,8 +264,6 @@ function _yamlconfig_load_yaml_objects($files) {
       $objects[$type] += $obj_list;
     }
   }
-  var_dump($objects);
-  print "\r\n" . '------------' . "\r\n";
   return $objects;
 }
 
@@ -215,7 +271,7 @@ function _yamlconfig_build_config_directory($module, $directory) {
   $path = drupal_get_path('module', $module);
   $endchar = substr($path, -1);
   if ($endchar != '/' || $endchar != '\\') {
-    $path .= '/';
+   $path .= '/';
   }
   return DRUPAL_ROOT . '/' . $path . $directory;
 }
@@ -233,7 +289,7 @@ function _yamlconfig_find_yaml_files($module, $directory, &$files) {
       } elseif (is_dir($directory . $file)) {
         _yamlconfig_find_yaml_files($module, $directory . $file, $files);
       }
-    }  
+    }
   }
 }
 
