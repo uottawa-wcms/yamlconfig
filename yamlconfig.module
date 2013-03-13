@@ -16,6 +16,9 @@ function yamlconfig_stored_value_replacement($type, &$location) {
 
 function yamlconfig_yamlconfig_handlers() {
   return array(
+    'var' => array(
+      'weight' => 0,
+    ),
     'language' => array(
       'weight' => -20,
     ),

@@ -15,18 +15,30 @@ function yamlconfig_field_replace_handler_validate($def) {
   }
 }
 
+function yamlconfig_field_replace_handler_preprocess(&$def) {
+  if (!is_array($def['field'])) {
+    $def['field'] = array($def['field']);
+  }
+}
+
 function yamlconfig_field_replace_handler_create($def) {
-  title_field_replacement_toggle($def['entity_type'], $def['bundle'], $def['field']);
+  foreach ($def['field'] as $field) {
+    title_field_replacement_toggle($def['entity_type'], $def['bundle'], $field);
+  }
 }
 
 function yamlconfig_field_replace_handler_refresh($def) {
-  if (!title_field_replacement_enabled($def['entity_type'], $def['bundle'], $def['field'])) {
-    yamlconfig_field_replace_handler_create($def);
+  foreach ($def['field'] as $field) {
+    if (!title_field_replacement_enabled($def['entity_type'], $def['bundle'], $field)) {
+      title_field_replacement_toggle($def['entity_type'], $def['bundle'], $field);
+    }
   }
 }
 
 function yamlconfig_field_replace_handler_uninstall($def) {
-  if (title_field_replacement_enabled($def['entity_type'], $def['bundle'], $def['field'])) {
-    title_field_replacement_toggle($def['entity_type'], $def['bundle'], $def['field']);
-  }  
+  foreach ($def['field'] as $field) {
+    if (title_field_replacement_enabled($def['entity_type'], $def['bundle'], $field)) {
+      title_field_replacement_toggle($def['entity_type'], $def['bundle'], $field);
+    }
+  }
 }
