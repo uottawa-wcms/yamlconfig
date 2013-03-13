@@ -161,8 +161,8 @@ function yamlconfig_process_config($files, $mode = YAMLCONFIG_CREATE) {
     $preprocess_function = $parser_info['preprocess'];
     $preprocess = is_callable($preprocess_function);
     if (is_callable($function)) {
-      foreach ($obj_list as $obj) {
-        _yamlconfig_alter_object($type, $mode, $obj);
+      foreach ($obj_list as $key => $obj) {
+        _yamlconfig_alter_object($type, $key, $obj, $mode);
         $passed = TRUE;
         if (!is_bool($validate_function)) {
           $passed = $validate_function($obj);
@@ -183,12 +183,12 @@ function yamlconfig_process_config($files, $mode = YAMLCONFIG_CREATE) {
   }
 }
 
-function _yamlconig_alter_object($type, $mode, &$object) {
+function _yamlconig_alter_object($type, $key, &$object, $mode) {
   $modules = module_implements('yamlconfig_object_alter');
   foreach ($modules as $module) {
     $hook = $module . '_yamlconfig_object_alter';
     if (function_exists($hook)) {
-      $hook($type, $mode, $object);
+      $hook($type, $key, $object, $mode);
     }
   }
 }
