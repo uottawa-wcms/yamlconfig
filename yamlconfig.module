@@ -31,6 +31,9 @@ function yamlconfig_yamlconfig_handlers() {
     'node_type' => array(
       'weight' => 500,
     ),
+    'bean' => array(
+      'weight' => 500,
+    ),
     'text_format' => array(
       'weight' => 4000,
     ),
