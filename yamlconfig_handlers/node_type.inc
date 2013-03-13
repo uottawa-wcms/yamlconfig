@@ -16,17 +16,19 @@ function yamlconfig_node_type_handler_validate($def) {
   if (empty($def['name'])) {
     return FALSE;
   }
-  
+
 }
 
 function yamlconfig_node_type_handler_create($def) {
+  $translate = !empty($def['translatable']) ? !!$def['translatable'] : FALSE;
   node_type_save((object) $def);
-  // do something with this
-  //variable_set('language_content_type_uottawa_index_page',TRANSLATION_ENABLED);
+  if ($translate) {
+    variable_set('language_content_type_' . $def['type'], TRANSLATION_ENABLED);
+  }
 }
 
 function yamlconfig_node_type_handler_refresh($def) {
-  node_type_save((object) $def);
+  yamlconfig_node_type_handler_create($def);
 }
 
 function yamlconfig_node_type_handler_disable($def) {
@@ -38,4 +40,5 @@ function yamlconfig_node_type_handler_disable($def) {
 
 function yamlconfig_node_type_handler_uninstall($def) {
   node_type_delete($def['type']);
+  variable_del('language_content_type_' . $def['type']);
 }
