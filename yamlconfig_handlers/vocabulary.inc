@@ -13,7 +13,8 @@ function yamlconfig_vocabulary_handler_validate($def) {
 }
 
 function yamlconfig_vocabulary_handler_create($def) {
-  if (empty(taxonomy_vocabulary_machine_name_load($def['machine_name']))) {
+  $test_vocab = taxonomy_vocabulary_machine_name_load($def['machine_name']);
+  if (empty($test_vocab)) {
     $vocab = (object) $def;
     taxonomy_vocabulary_save($vocab);
   }
