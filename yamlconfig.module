@@ -183,7 +183,7 @@ function yamlconfig_process_config($files, $mode = YAMLCONFIG_CREATE) {
   }
 }
 
-function _yamlconig_alter_object($type, $key, &$object, $mode) {
+function _yamlconfig_alter_object($type, $key, &$object, $mode) {
   $modules = module_implements('yamlconfig_object_alter');
   foreach ($modules as $module) {
     $hook = $module . '_yamlconfig_object_alter';

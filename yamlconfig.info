@@ -1,3 +1,10 @@
 name = YAML Config
 description = "Allows for configuration to be imported via YAML"
 core = 7.x
+
+
+; Information added by drush on 2013-03-14
+version = "unknown"
+project = "yamlconfig"
+datestamp = "1363270866"
+
