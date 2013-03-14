@@ -11,7 +11,8 @@ function yamlconfig_bean_handler_validate($def) {
 }
 
 function yamlconfig_bean_handler_create($def) {
-  if (empty(bean_type_load($def['machine_name']))) {
+  $type_test = bean_type_load($def['machine_name']);
+  if (empty($type_text)) {
     $plugin = _bean_admin_default_plugin();
     $plugin['name'] = '';
     $type = new BeanCustom($plugin);
