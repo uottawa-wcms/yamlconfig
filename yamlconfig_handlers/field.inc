@@ -11,7 +11,6 @@ function yamlconfig_field_handler_validate($definition) {
 }
 
 function yamlconfig_field_handler_create($definition) {
-  var_dump('calling create handler');
   if (!field_info_field($definition['field_name'])) {
     field_create_field($definition);
   }

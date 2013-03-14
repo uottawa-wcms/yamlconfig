@@ -262,7 +262,6 @@ function _yamlconfig_parse_yaml_objects($file) {
   // assumption - each file has only one document. we need to
   // figure out how to use multiple documents in one file here
   $data = spyc_load_file($file);
-  echo "\r\n";
   return array(
     $pieces[1] => array(
       $pieces[2] => $data,
