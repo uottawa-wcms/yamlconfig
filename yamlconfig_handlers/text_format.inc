@@ -10,6 +10,7 @@ function yamlconfig_text_format_handler_validate($def) {
   if (empty($def['name'])) {
     return FALSE;
   }
+  return TRUE;
 }
 
 function yamlconfig_text_format_handler_preprocess(&$def) {

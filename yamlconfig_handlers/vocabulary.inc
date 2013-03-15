@@ -10,6 +10,7 @@ function yamlconfig_vocabulary_handler_validate($def) {
   if (empty($def['machine_name'])) {
     return FALSE;
   }
+  return TRUE;
 }
 
 function yamlconfig_vocabulary_handler_create($def) {

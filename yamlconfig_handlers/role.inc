@@ -17,8 +17,12 @@ function yamlconfig_role_handler_create($def) {
   }
 }
 
+function yamlconfig_role_handler_refresh($def) {
+  yamlconfig_role_handler_refresh($def);
+}
+
 function yamlconfig_role_handler_update($def) {
-  $def += (array) user_role_load_by_name($def['name']); 
+  $def += (array) user_role_load_by_name($def['name']);
   user_role_save((object) $def);
 }
 

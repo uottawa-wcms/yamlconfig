@@ -19,6 +19,7 @@ function yamlconfig_permission_handler_validate($def) {
       }
     }
   }
+  return TRUE;
 }
 
 function yamlconfig_permission_handler_preprocess(&$def) {

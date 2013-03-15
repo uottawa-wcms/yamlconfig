@@ -2,12 +2,10 @@
 
 
 function yamlconfig_wysiwyg_instance_handler_validate($def) {
-  if (empty($def['type'])) {
-    return FALSE;
-  }
   if (empty($def['ref'])) {
     return FALSE;
   }
+  return TRUE;
 }
 
 function yamlconfig_wysiwyg_instance_handler_preprocess(&$def) {

@@ -4,7 +4,28 @@ define('YAMLCONFIG_CREATE', 'create');
 define('YAMLCONFIG_REFRESH', 'refresh');
 define('YAMLCONFIG_DISABLE', 'disable');
 define('YAMLCONFIG_UNINSTALL', 'uninstall');
+define('YAMLCONFIG_DISPLAY', 'display');
 
+function yamlconfig_permission() {
+  return array(
+    'yamlconfig refresh' => array(
+      'title' => t('Refresh the managed configuration'),
+      'restrict access' => TRUE,
+    )
+  );
+}
+
+function yamlconfig_menu() {
+  return array(
+    'admin/config/development/yaml' => array(
+      'title' => 'Managed Configuration',
+      'access arguments' => array('yamlconfig refresh'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('yamlconfig_admin_status_page'),
+      'file' => 'yamlconfig.admin.inc',
+    ),
+  );
+}
 
 function yamlconfig_stored_value_replacement($type, &$location) {
   if (isset($location['ref'])) {
@@ -145,7 +166,8 @@ function _yamlconfig_sort_parser_weight($a, $b) {
 }
 
 function yamlconfig_process_config($files, $mode = YAMLCONFIG_CREATE) {
-  drupal_alter(array('yamlconfig_files'), $mode);
+  $context = array('mode' => $mode);
+  drupal_alter(array('yamlconfig_files'), $files, $context);
   $objects = _yamlconfig_load_yaml_objects($files);
   uksort($objects, '_yamlconfig_sort_parser_weight');
   foreach ($objects as $type => $obj_list) {
@@ -171,6 +193,8 @@ function yamlconfig_process_config($files, $mode = YAMLCONFIG_CREATE) {
           if ($preprocess) {
             $preprocess_function($obj);
           }
+          unset($obj['file']);
+          unset($obj['module']);
           $function($obj);
         } else {
           drupal_set_message(t('Invalid YAML object of type @type {@obj}', array(
@@ -183,6 +207,65 @@ function yamlconfig_process_config($files, $mode = YAMLCONFIG_CREATE) {
   }
 }
 
+function yamlconfig_display_config() {
+  $config_objects = array();
+  $files = _yamlconfig_find_all_files();
+  $context = array('mode' => YAMLCONFIG_DISPLAY);
+  drupal_alter(array('yamlconfig_files'), $files, $context);
+  $objects = _yamlconfig_load_yaml_objects($files);
+  uksort($objects, '_yamlconfig_sort_parser_weight');
+  foreach ($objects as $type => $obj_list) {
+    $parser_info = yamlconfig_get_handler_info($type);
+    if (!empty($parser_info)) {
+      if (!empty($parser_info['file'])) {
+        module_load_include($parser_info['type'], $parser_info['module'], $parser_info['file']);
+      }
+      $validate_function = $parser_info['validate'];
+      if (!is_callable($validate_function)) {
+        $validate_function = TRUE;
+      }
+      $preprocess_function = $parser_info['preprocess'];
+      $preprocess = is_callable($preprocess_function);
+    }
+    foreach ($obj_list as $key => $obj) {
+      $object = array();
+      $object['type'] = $type;
+      $object['module'] = $obj['module'];
+      $object['parser'] = !empty($parser_info);
+      $object['file'] = $obj['file'];
+      $object['key'] = $key;
+      $object['valid'] = is_callable($validate_function) ?
+          $validate_function($obj) : TRUE;
+      $object['create'] = function_exists($parser_info[YAMLCONFIG_CREATE]);
+      $object['refresh'] = function_exists($parser_info[YAMLCONFIG_REFRESH]);
+      $object['disable'] = function_exists($parser_info[YAMLCONFIG_DISABLE]);
+      $object['uninstall'] = function_exists($parser_info[YAMLCONFIG_UNINSTALL]);
+
+      $config_objects[] = $object;
+    }
+
+  }
+  return $config_objects;
+}
+
+function _yamlconfig_find_all_files($modules = NULL) {
+  $files = array();
+  if (!is_array($modules) || empty($modules)) {
+    $modules = module_implements('yamlconfig_directories');
+  }
+  foreach ($modules as $module) {
+    $hook = $module . '_yamlconfig_directories';
+    if (function_exists($hook)) {
+      $directories = $hook();
+      foreach ($directories as $dir) {
+        _yamlconfig_find_yaml_files($module, _yamlconfig_build_config_directory($module, $dir), $files);
+      }
+    }
+  }
+  return $files;
+}
+
+
 function _yamlconfig_alter_object($type, $key, &$object, $mode) {
   $modules = module_implements('yamlconfig_object_alter');
   foreach ($modules as $module) {
@@ -194,21 +277,12 @@ function _yamlconfig_alter_object($type, $key, &$object, $mode) {
 }
 
 function yamlconfig_refresh_config() {
-  $yamlconfig_files = array();
-  $modules = module_implements('yamlconfig_directories');
-  foreach ($modules as $module) {
-    $dir_hook = $module . '_yamlconfig_directories';
-    if (function_exists($dir_hook)) {
-      $directories = $dir_hook();
-      foreach ($directories as $dir) {
-        _yamlconfig_find_yaml_files($module, _yamlconfig_build_config_directory($module, $dir), $yamlconfig_files);
-      }
-    }
-  }
+  $yamlconfig_files = _yamlconfig_find_all_files();
   yamlconfig_process_config($yamlconfig_files, YAMLCONFIG_REFRESH);
 }
 
 function yamlconfig_modules_uninstalled($modules) {
+  // custom implementation as we need to load the module file
   $yamlconfig_files = array();
   foreach ($modules as $module) {
     $dir_hook = $module . '_yamlconfig_directories';
@@ -226,30 +300,12 @@ function yamlconfig_modules_uninstalled($modules) {
 }
 
 function yamlconfig_modules_disabled($modules) {
-  $yamlconfig_files = array();
-  foreach ($modules as $module) {
-    $dir_hook = $module . '_yamlconfig_directories';
-    if (function_exists($dir_hook)) {
-      $directories = $dir_hook();
-      foreach ($directories as $dir) {
-        _yamlconfig_find_yaml_files($module, _yamlconfig_build_config_directory($module, $dir), $yamlconfig_files);
-      }
-    }
-  }
+  $yamlconfig_files = _yamlconfig_find_all_files($modules);
   yamlconfig_process_config($yamlconfig_files, YAMLCONFIG_DISABLE);
 }
 
 function yamlconfig_modules_enabled($modules) {
-  $yamlconfig_files = array();
-  foreach ($modules as $module) {
-    $dir_hook = $module . '_yamlconfig_directories';
-    if (function_exists($dir_hook)) {
-      $directories = $dir_hook();
-      foreach ($directories as $dir) {
-        _yamlconfig_find_yaml_files($module, _yamlconfig_build_config_directory($module, $dir), $yamlconfig_files);
-      }
-    }
-  }
+  $yamlconfig_files = _yamlconfig_find_all_files($modules);
   yamlconfig_process_config($yamlconfig_files, YAMLCONFIG_CREATE);
 }
 
@@ -258,13 +314,16 @@ function _yamlconfig_parse_yaml_objects($file) {
   if (!function_exists('spyc_load_file')) {
     include DRUPAL_ROOT . '/sites/all/libraries/spyc/Spyc.php';
   }
-  $pieces = explode('.', $file);
+  $pieces = explode('.', basename($file));
   // assumption - each file has only one document. we need to
   // figure out how to use multiple documents in one file here
   $data = spyc_load_file($file);
   return array(
     $pieces[1] => array(
-      $pieces[2] => $data,
+      $pieces[2] => array(
+          'file' => $file,
+          'module' => $pieces[0],
+        ) + $data,
     ),
   );
 }

@@ -7,6 +7,7 @@ function yamlconfig_wysiwyg_profile_handler_validate($def) {
   if (!isset($def['format'])) {
     return FALSE;
   }
+  return TRUE;
 }
 
 function yamlconfig_wysiwyg_profile_handler_preprocess(&$def) {

@@ -16,7 +16,7 @@ function yamlconfig_node_type_handler_validate($def) {
   if (empty($def['name'])) {
     return FALSE;
   }
-
+  return TRUE;
 }
 
 function yamlconfig_node_type_handler_create($def) {

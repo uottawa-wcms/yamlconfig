@@ -8,6 +8,7 @@ function yamlconfig_widget_instance_handler_validate($def) {
   if (empty($def['ref'])) {
     return FALSE;
   }
+  return TRUE;
 }
 
 function yamlconfig_widget_instance_handler_preprocess(&$def) {
