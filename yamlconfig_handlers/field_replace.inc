@@ -14,14 +14,10 @@ function yamlconfig_field_replace_handler_validate($def) {
   if (empty($def['bundle'])) {
     return FALSE;
   }
-  if (!in_array($def['bundle'], $entity_check['bundles'])) {
+  if (!in_array($def['bundle'], array_keys($entity_check['bundles']))) {
     return FALSE;
   }
   if (empty($def['field'])) {
-    return FALSE;
-  }
-  $field_check = field_info_field($def['field']);
-  if (empty($field_check)) {
     return FALSE;
   }
   return TRUE;

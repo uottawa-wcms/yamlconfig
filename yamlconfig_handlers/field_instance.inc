@@ -7,14 +7,15 @@ function yamlconfig_field_instance_handler_validate($def) {
   if (!isset($def['entity_type'])) {
     return FALSE;
   }
-  if (!isset($def['bundle'])) {
-    return FALSE;
-  }
   $info = entity_get_info($def['entity_type']);
   if (empty($info)) {
     return FALSE;
   }
-  if (!in_array($def['bundle'], $info['bundles'])) {
+  if (!isset($def['bundle'])) {
+    return FALSE;
+  }
+  $check = field_info_field($def['field_name']);
+  if (empty($check)) {
     return FALSE;
   }
   return TRUE;

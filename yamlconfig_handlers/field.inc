@@ -11,7 +11,8 @@ function yamlconfig_field_handler_validate($definition) {
 }
 
 function yamlconfig_field_handler_create($definition) {
-  if (!field_info_field($definition['field_name'])) {
+  $check = field_info_field($definition['field_name']);
+  if (empty($check)) {
     field_create_field($definition);
   }
 }
