@@ -20,7 +20,7 @@ function yamlconfig_text_format_handler_preprocess(&$def) {
 }
 
 function yamlconfig_text_format_handler_create($def) {
-  filter_format_save($def);
+  filter_format_save((object) $def);
 }
 
 function yamlconfig_text_format_handler_refresh($def) {
@@ -29,5 +29,5 @@ function yamlconfig_text_format_handler_refresh($def) {
 
 function yamlconfig_text_format_handler_disable($def) {
   $def['status'] = 0;
-  filter_format_save($def);
+  yamlconfig_text_format_handler_create($def);
 }

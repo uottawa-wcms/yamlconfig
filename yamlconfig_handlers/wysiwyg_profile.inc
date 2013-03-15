@@ -4,7 +4,7 @@ function yamlconfig_wysiwyg_profile_handler_validate($def) {
   if (!module_exists('wysiwyg')) {
     return FALSE;
   }
-  if (!isset($def['format'])) {
+  if (empty($def['format'])) {
     return FALSE;
   }
   return TRUE;
@@ -17,11 +17,12 @@ function yamlconfig_wysiwyg_profile_handler_preprocess(&$def) {
 }
 
 function yamlconfig_wysiwyg_profile_handler_create($def) {
-  db_merge('wysiwyg', 'w')
+  db_merge('wysiwyg')
     ->key(array('format' => $def['format']))
     ->fields(array(
+      'format' => $def['format'],
       'editor' => $def['editor'],
-      'settings' => $def['settings'],
+      'settings' => serialize($def['settings']),
     ))
     ->execute();
 }

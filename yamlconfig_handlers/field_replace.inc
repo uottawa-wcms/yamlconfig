@@ -7,12 +7,24 @@ function yamlconfig_field_replace_handler_validate($def) {
   if (empty($def['entity_type'])) {
     return FALSE;
   }
+  $entity_check = entity_get_info($def['entity_type']);
+  if (empty($entity_check)) {
+    return FALSE;
+  }
   if (empty($def['bundle'])) {
+    return FALSE;
+  }
+  if (!in_array($def['bundle'], $entity_check['bundles'])) {
     return FALSE;
   }
   if (empty($def['field'])) {
     return FALSE;
   }
+  $field_check = field_info_field($def['field']);
+  if (empty($field_check)) {
+    return FALSE;
+  }
+  return TRUE;
 }
 
 function yamlconfig_field_replace_handler_preprocess(&$def) {

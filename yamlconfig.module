@@ -89,12 +89,12 @@ function yamlconfig_store_value($type, $key, $data) {
   $q = db_merge('yamlconfig_storage');
   $q->fields(array(
     'type' => $type,
-    'key' => $key,
-    'data' => serialize($data),
+    'yamlkey' => $key,
+    'yamldata' => serialize($data),
   ));
   $q->key(array(
     'type' => $type,
-    'key' => $key,
+    'yamlkey' => $key,
   ));
   $res = $q->execute();
   // clear static cache also
@@ -108,11 +108,11 @@ function yamlconfig_retrieve_value($type, $key) {
   if (empty($results)) {
     $rs = db_query('SELECT * FROM {yamlconfig_storage}');
     foreach ($rs as $row) {
-      $results[$row->type][$row->key] = unserialize($row->data);
+      $results[$row->type][$row->yamlkey] = unserialize($row->yamldata);
     }
   }
-  if (!empty($results[$row->type][$row->key])) {
-    return $results[$row->type][$row->key];
+  if (!empty($results[$type][$key])) {
+    return $results[$type][$key];
   }
   return NULL;
 }
@@ -120,7 +120,7 @@ function yamlconfig_retrieve_value($type, $key) {
 function yamlconfig_remove_value($type, $key) {
   db_delete('yamlconfig_storage')
       ->condition('type', $type)
-      ->condition('key', $key)
+      ->condition('yamlkey', $key)
       ->execute();
 }
 
@@ -175,12 +175,14 @@ function yamlconfig_process_config($files, $mode = YAMLCONFIG_CREATE) {
     if (!empty($parser_info['file'])) {
       module_load_include($parser_info['type'], $parser_info['module'], $parser_info['file']);
     }
-    $validate_function = $parser_info['validate'];
+    $validate_function = isset($parser_info['validate']) ?
+        $parser_info['validate'] : NULL;
     if (!is_callable($validate_function)) {
       $validate_function = TRUE;
     }
-    $function = $parser_info[$mode];
-    $preprocess_function = $parser_info['preprocess'];
+    $function = isset($parser_info[$mode]) ? $parser_info[$mode] : NULL;
+    $preprocess_function = isset($parser_info['preprocess']) ?
+        $parser_info['preprocess'] : NULL;
     $preprocess = is_callable($preprocess_function);
     if (is_callable($function)) {
       foreach ($obj_list as $key => $obj) {
@@ -220,11 +222,13 @@ function yamlconfig_display_config() {
       if (!empty($parser_info['file'])) {
         module_load_include($parser_info['type'], $parser_info['module'], $parser_info['file']);
       }
-      $validate_function = $parser_info['validate'];
+      $validate_function = isset($parser_info['validate']) ?
+          $parser_info['validate'] : NULL;
       if (!is_callable($validate_function)) {
         $validate_function = TRUE;
       }
-      $preprocess_function = $parser_info['preprocess'];
+      $preprocess_function = isset($parser_info['preprocess']) ?
+          $parser_info['preprocess'] : NULL;
       $preprocess = is_callable($preprocess_function);
     }
     foreach ($obj_list as $key => $obj) {
@@ -236,10 +240,10 @@ function yamlconfig_display_config() {
       $object['key'] = $key;
       $object['valid'] = is_callable($validate_function) ?
           $validate_function($obj) : TRUE;
-      $object['create'] = function_exists($parser_info[YAMLCONFIG_CREATE]);
-      $object['refresh'] = function_exists($parser_info[YAMLCONFIG_REFRESH]);
-      $object['disable'] = function_exists($parser_info[YAMLCONFIG_DISABLE]);
-      $object['uninstall'] = function_exists($parser_info[YAMLCONFIG_UNINSTALL]);
+      $object['create'] = isset($parser_info[YAMLCONFIG_CREATE]) && function_exists($parser_info[YAMLCONFIG_CREATE]);
+      $object['refresh'] = isset($parser_info[YAMLCONFIG_REFRESH]) && function_exists($parser_info[YAMLCONFIG_REFRESH]);
+      $object['disable'] = isset($parser_info[YAMLCONFIG_DISABLE]) && function_exists($parser_info[YAMLCONFIG_DISABLE]);
+      $object['uninstall'] = isset($parser_info[YAMLCONFIG_UNINSTALL]) && function_exists($parser_info[YAMLCONFIG_UNINSTALL]);
 
       $config_objects[] = $object;
     }

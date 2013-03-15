@@ -25,14 +25,14 @@ function _yamlconfig_schema_storage() {
         'serialize' => FALSE,
         'binary' => FALSE,
       ),
-      'key' => array(
+      'yamlkey' => array(
         'type' => 'varchar',
         'length' => 255,
         'not null' => TRUE,
         'serialize' => FALSE,
         'binary' => FALSE,
       ),
-      'data' => array(
+      'yamldata' => array(
         'type' => 'blob',
         'size' => 'normal',
         'not null' => TRUE,
@@ -43,7 +43,7 @@ function _yamlconfig_schema_storage() {
       'id',
     ),
     'unique keys' => array(
-      'type_key' => array('type', 'key'),
+      'type_yamlkey' => array('type', 'yamlkey'),
     ),
     'indexes' => array(),
   );
