@@ -40,6 +40,9 @@ function yamlconfig_yamlconfig_handlers() {
     'var' => array(
       'weight' => 0,
     ),
+    'ldap_server' => array(
+      'weight' => 0,
+    ),
     'language' => array(
       'weight' => -20,
     ),

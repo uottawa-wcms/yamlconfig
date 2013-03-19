@@ -8,3 +8,10 @@ version = "unknown"
 project = "yamlconfig"
 datestamp = "1363270866"
 
+
+
+; Information added by drush on 2013-03-18
+version = "unknown"
+project = "yamlconfig"
+datestamp = "1363612922"
+
