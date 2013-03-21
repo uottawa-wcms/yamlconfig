@@ -23,7 +23,8 @@ function yamlconfig_node_type_handler_create($def) {
   $translate = !empty($def['translatable']) ? !!$def['translatable'] : FALSE;
   node_type_save((object) $def);
   if ($translate) {
-    variable_set('language_content_type_' . $def['type'], TRANSLATION_ENABLED);
+    // @todo we should remove this and force them to define it through var.
+    variable_set('language_content_type_' . $def['type'], 4);
   }
 }
 
