@@ -10,7 +10,8 @@ function yamlconfig_term_handler_validate($def) {
   if (empty($def['vocabulary'])) {
     return FALSE;
   }
-  if (empty(taxonomy_vocabulary_machine_name_load($def['vocabulary']))) {
+  $test = taxonomy_vocabulary_machine_name_load($def['vocabulary']);
+  if (empty($test)) {
     return FALSE;
   }
 }

@@ -5,11 +5,17 @@ define('YAMLCONFIG_REFRESH', 'refresh');
 define('YAMLCONFIG_DISABLE', 'disable');
 define('YAMLCONFIG_UNINSTALL', 'uninstall');
 define('YAMLCONFIG_DISPLAY', 'display');
+define('YAMLCONFIG_LIST', 'list');
+define('YAMLCONFIG_EXPORT', 'export');
 
 function yamlconfig_permission() {
   return array(
     'yamlconfig refresh' => array(
       'title' => t('Refresh the managed configuration'),
+      'restrict access' => TRUE,
+    ),
+    'yamlconfig_export' => array(
+      'title' => t('Export managed configuration'),
       'restrict access' => TRUE,
     )
   );
@@ -24,6 +30,14 @@ function yamlconfig_menu() {
       'page arguments' => array('yamlconfig_admin_status_page'),
       'file' => 'yamlconfig.admin.inc',
     ),
+    'admin/config/development/yaml/export' => array(
+      'title' => 'Export',
+      'access arguments' => array('yamlconfig export'),
+      'page callback' => 'drupal_get_form',
+      'page arguments' => array('yamlconfig_admin_export_page'),
+      'file' => 'yamlconfig.admin.inc',
+      'type' => MENU_LOCAL_TASK,
+    )
   );
 }
 
@@ -120,6 +134,36 @@ function yamlconfig_retrieve_value($type, $key) {
   return NULL;
 }
 
+function yamlconfig_export_type_list() {
+  $results = array();
+  $handlers = yamlconfig_get_handler_info();
+  foreach ($handlers as $type => $handler) {
+    if (!empty($handler['file'])) {
+      module_load_include('inc', $handler['module'], $handler['file']);
+    }
+    if (function_exists($handler[YAMLCONFIG_LIST])) {
+      $results[$type] = $type;
+    }
+  }
+  return $results;
+}
+
+function yamlconfig_export_list($type = NULL) {
+  $results = array();
+  $handlers = yamlconfig_get_handler_info($type);
+  if (!empty($type)) { $handlers = array($type => $handlers); }
+  foreach ($handlers as $type => $handler) {
+    if (!empty($handler['file'])) {
+      module_load_include('inc', $handler['module'], $handler['file']);
+    }
+    if (function_exists($handler[YAMLCONFIG_LIST])) {
+      $results[$type] = $handler[YAMLCONFIG_LIST]();
+    }
+  }
+  drupal_alter('yamlconfig_export_list', $results);
+  return $results;
+}
+
 function yamlconfig_remove_value($type, $key) {
   db_delete('yamlconfig_storage')
       ->condition('type', $type)
@@ -146,6 +190,8 @@ function yamlconfig_get_handler_info($type = NULL) {
             'refresh' => $module . '_' . $key . '_handler_refresh',
             'disable' => $module . '_' . $key . '_handler_disable',
             'uninstall' => $module . '_' . $key . '_handler_uninstall',
+            'list' => $module . '_' . $key . '_handler_list',
+            'export' => $module . '_' . $key . '_handler_export',
             'weight' => 0,
           );
         }
@@ -210,6 +256,25 @@ function yamlconfig_process_config($files, $mode = YAMLCONFIG_CREATE) {
       }
     }
   }
+}
+
+function yamlconfig_export_object($type, $object_key) {
+  $handler = yamlconfig_get_handler_info($type);
+  if (!empty($handler['file'])) {
+    module_load_include('inc', $handler['module'], $handler['file']);
+  }
+  if (function_exists($handler[YAMLCONFIG_EXPORT])) {
+    // this is really bad. don't do it. use libraries later.
+    if (!function_exists('spyc_load_file')) {
+      include DRUPAL_ROOT . '/sites/all/libraries/spyc/Spyc.php';
+    }
+    return Spyc::YAMLDump($handler[YAMLCONFIG_EXPORT]($object_key));
+  }
+  return NULL;
+}
+
+function yamlconfig_admin_rebuild_export($form, &$form_state) {
+  return $form['container'];
 }
 
 function yamlconfig_display_config() {

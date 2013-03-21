@@ -1,5 +1,72 @@
 <?php
 
+function yamlconfig_admin_export_page($form, &$form_state) {
+  $handlers = array(
+    '' => 'Select one...',
+  );
+  $form['container']['#prefix'] = '<div id="yaml-export-form">';
+  $handlers += yamlconfig_export_type_list();
+  ksort($handlers);
+  $type = isset($form_state['values']['export_type']) ?
+      $form_state['values']['export_type'] : reset(array_keys($handlers));
+  $form['container']['export_type'] = array(
+    '#title' => t('Object Type'),
+    '#type' => 'select',
+    '#description' => t('Select the type of object you would like to export'),
+    '#options' => $handlers,
+    '#default_value' => $type,
+    '#ajax' => array(
+      'callback' => 'yamlconfig_admin_rebuild_export',
+      'wrapper' => 'yaml-export-form',
+      'method' => 'replace',
+    ),
+  );
+  if (!empty($type)) {
+    $objects = yamlconfig_export_list($type);
+    $form['container']['export_option'] = array(
+      '#title' => t('Object Key'),
+      '#type' => 'select',
+      '#description' => t('Select the object you would like to export'),
+      '#options' => array('' => t('Select one...')) + $objects[$type],
+      '#ajax' => array(
+        'callback' => 'yamlconfig_admin_rebuild_export',
+        'wrapper' => 'yaml-export-form',
+        'method' => 'replace',
+      ),
+    );
+  }
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Export'),
+  );
+  if (!empty($form_state['values']['export_option'])) {
+    $value = t('We were unable to export the requested object');
+    $export = yamlconfig_export_object($type, $form_state['values']['export_option']);
+    if (!empty($export)) {
+      $value = $export;
+    }
+    $form['container']['name'] = array(
+      '#type' => 'markup',
+      '#markup' => '<p>Recommended Name:<br /><strong><em>mymodule</em>.' . $type . '.' . $form_state['values']['export_option'] . '.yml</strong>',
+    );
+    $form['container']['export'] = array(
+      '#title' => t('Exported Object'),
+      '#type' => 'textarea',
+      '#value' => $value,
+      '#rows' => 20,
+      '#attributes' => array(
+        'style' => 'font-family: Courier New',
+      ),
+    );
+  }
+  $form['container']['#suffix'] = '</div>';
+  return $form;
+}
+
+function yamlconfig_admin_export_page_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+}
+
 function yamlconfig_admin_status_page($form, &$form_state) {
   $form['refresh'] = array(
     '#type' => 'submit',

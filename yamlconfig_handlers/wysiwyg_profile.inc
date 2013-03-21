@@ -37,3 +37,20 @@ function yamlconfig_wysiwyg_profile_handler_uninstall($def) {
     ->execute();
   wysiwyg_profile_cache_clear();
 }
+
+function yamlconfig_wysiwyg_profile_handler_list() {
+  return db_select('wysiwyg')
+      ->fields('wysiwyg', array('format'))
+      ->execute()
+      ->fetchAllKeyed(0,0);
+}
+
+function yamlconfig_wysiwyg_profile_handler_export($key) {
+  $profile = db_select('wysiwyg')
+      ->fields('wysiwyg')
+      ->condition('format', $key)
+      ->execute()
+      ->fetchAssoc();
+  $profile['settings'] = unserialize($profile['settings']);
+  return $profile;
+}
